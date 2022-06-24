@@ -90,6 +90,9 @@ def estimate_spherical_subspace(X,param):
     evals , evecs = np.linalg.eig(Cx)
     evals = np.real(evals)
     evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
     #####################################
     H = evecs[:,0:d+1]
     S.H = H
@@ -111,7 +114,10 @@ def subspace_dist(S,S_):
     T = np.matmul(H.T,H_)
     #####################################
     SVs = scipy.linalg.svdvals(T)
+    #print(T)
+    #print(SVs)
     SVs = np.minimum(SVs,1)
+    #print(SVs)
     #####################################
     dist =  np.sqrt( np.sum(np.arccos(SVs)**2) )
     return dist
