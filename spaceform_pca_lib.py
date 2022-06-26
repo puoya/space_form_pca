@@ -52,12 +52,7 @@ def random_spherical_tangents(S,param):
     #####################################
     Vt = Vt + noise
     #####################################
-    noise_lvl = 0
-    for n in range(N):
-        x = noise[:,n]
-        noise_lvl = noise_lvl + np.linalg.norm(x)/N
-    #####################################
-    return Vt, noise_lvl
+    return Vt
 ###########################################################################
 def spherical_exp(Vt,S):
     p = S.p
@@ -74,11 +69,16 @@ def spherical_exp(Vt,S):
 ###########################################################################
 def random_spherical_data(param):
     S = random_spherical_subspace(param)
+    H = S.H
     #####################################
-    Vt, noise_lvl = random_spherical_tangents(S,param)
+    Vt = random_spherical_tangents(S,param)
     #####################################
     X = spherical_exp(Vt,S)
     #####################################
+    noise_lvl = np.linalg.norm(np.matmul(H.T,X),2,axis = 0)
+    noise_lvl = np.minimum(noise_lvl,1)
+    noise_lvl = np.arccos(noise_lvl)
+    noise_lvl = np.mean(noise_lvl)
     return X,S,noise_lvl
 ###########################################################################
 def estimate_spherical_subspace(X,param):
