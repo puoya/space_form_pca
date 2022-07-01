@@ -74,10 +74,26 @@ to run one at a time due to the amount of time it takes for
 each experiment to run. 
 """
 
+print('\n> D_Exp starting ...')
 start = time.time()
 D_Exp()
+end = time.time() 
+print('D_exp finished in ', round((end - start)/60, 2), 'minutes')
+
+print('\n> d_Exp starting ...')
+start = time.time()
 d_Exp()
+end = time.time() 
+print('d_exp finished in ', round((end - start)/60, 2), 'minutes')
+
+print('\n> N_Exp starting ...')
+start = time.time()
 N_Exp()
+end = time.time() 
+print('N_exp finished in ', round((end - start)/60, 2), 'minutes')
+
+print('\n> std_Exp starting ...')
+start = time.time()
 std_exp()
-end = time.time()
-print( round((end - start)/60, 2) )
+end = time.time() 
+print('std_exp finished in ', round((end - start)/60, 2), 'minutes')
