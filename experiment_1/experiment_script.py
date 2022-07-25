@@ -3,7 +3,7 @@ import time
 import synthetic_data as sd
 
 # num trials for each experiment
-numIterations = 2
+numIterations = 10
 
 #range of values to useof the parameters
 stdRange = [0.01, 0.05, 0.1] 
