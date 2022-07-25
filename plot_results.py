@@ -12,7 +12,7 @@ def plot(exp, idx):
     #experiment = "do"
     experiment = exp
     if experiment == "std":
-        data = np.load('std_exp.npy')
+        data = np.load('/content/std_exp.npy')
         ###################################################
         std_min = 0.05
         std_max = 5.00
@@ -31,7 +31,7 @@ def plot(exp, idx):
         ylabel = "$\overline{d(x_n,\mathbb{S}^d_H)}$"
         ###################################################
     elif experiment == "N":
-        data = np.load('N_exp.npy')
+        data = np.load('/content/N_exp.npy')
         ###################################################
         M = np.shape(data)[0]
         varx = 50*np.random.uniform(-0.5,0.5,M)
@@ -55,7 +55,7 @@ def plot(exp, idx):
             ylabel = "$d(\mathbb{S}^d_{\widehat{H}},\mathbb{S}^d_{H})$"
         plt.legend(loc="upper right")
     elif experiment == "d":
-        data = np.load('d_exp.npy')
+        data = np.load('/content/d_exp.npy')
         ###################################################
         M = np.shape(data)[0]
         varx = np.random.uniform(-0.5,0.5,M)
@@ -78,7 +78,7 @@ def plot(exp, idx):
             ylabel = "$\overline{d(x_n,\mathbb{S}^d_{H})}$"
         plt.legend(loc="upper right")
     else:
-        data = np.load('D_exp_.npy')
+        data = np.load('/content/D_exp_.npy')
         ###################################################
         M = np.shape(data)[0]
         varx = np.random.uniform(-0.5,0.5,M)
