@@ -326,7 +326,7 @@ def check_evals(eval_signs,param):
 
 
 
-
+###########################################################################
 def estimate_spherical_subspace_liu(X,param):
     S = subspace()
     d = param.d
@@ -335,27 +335,44 @@ def estimate_spherical_subspace_liu(X,param):
     normX = np.linalg.norm(X,'fro') 
     #####################################
     I = np.eye(D+1)
+    #H = np.random.randn(D+1,d+1)#I[:,0:d+1]
     H = I[:,0:d+1]
-    V = np.random.randn(d+1,N)
+    V = 100*np.random.randn(d+1,N)
     err = 1
     #####################################
-    lambd = 1000
-    mu = lambd
+    if N <= 100:
+        lambd = 70
+        mu = 70
+    elif N <= 1000:
+        lambd = 1000
+        mu = 1000
+    else:
+        lambd = 10000
+        mu = 10000
+
     condition = True
+    err_diff = 0
+    count = 0
     while condition:
+        count = count + 1
+        V = (lambd-2)*V+2*np.matmul(H.T,X)
         for n in range(N):
-            V[:,n] = (lambd-2)*V[:,n]+2*np.matmul(H.T,X[:,n])
+            #V[:,n] = (lambd-2)*V[:,n]+2*np.matmul(H.T,X[:,n])
             V[:,n] = V[:,n]/np.linalg.norm(V[:,n])
-        M = 2*np.matmul( (X-np.matmul(H,V) ), V.T)+mu*H
+        M = 2*np.matmul( (X-np.matmul(H,V)), V.T)+mu*H
         le,_,re = np.linalg.svd(M,full_matrices=False)
         H = np.matmul(le,re)
         X_ = np.matmul(H,V)
         err_ = np.linalg.norm(X-X_,'fro')/normX
-        condition = np.abs(err-err_)  > 1e-4
+        err_diff = err_-err
+        condition = (np.abs(err_diff)  > 10**(-5)) or err_diff> 0
         err =  err_
+        print(err_diff)
+        #print(count)
+        #print(lambd)
     S.H = H 
-    S.p = H[0,:]
-    S.Hp = H[0,1:d+1]
+    S.p = H[:,0]
+    S.Hp = H[:,1:d+1]
     return X_,S
 ########################################################################### 
 def estimate_spherical_subspace_pga(X,param):
@@ -374,8 +391,8 @@ def estimate_spherical_subspace_pga(X,param):
         delta_p = tau * np.mean(V,1)
         delta_p = delta_p.reshape(D+1,1)
         p = np.concatenate( spherical_exp(delta_p,S) )
-        err_ = np.linalg.norm(p-S.p)/(D+1)
-        condition = np.abs(err-err_)  > 1e-8
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        condition = np.abs(err-err_)  > 10**(-10)
         err = err_
         S.p = p
     #####################################    
@@ -409,36 +426,44 @@ def estimate_spherical_subspace_dai(X,param):
     p = X[:,0]+0.1
     S.p  = p/np.linalg.norm(p)
     err = 1
+    eps = 10**(-8)
     condition = True
-    eps = 1e-5
     #####################################    
     while condition:
         V = spherical_log(X,S)
         delta_p = tau * np.mean(V,1)
         delta_p = delta_p.reshape(D+1,1)
         p = np.concatenate( spherical_exp(delta_p,S) )
-        err_ = np.linalg.norm(p-S.p)/(D+1)
-        condition = np.abs(err-err_)  > 1e-8
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        condition = np.abs(err-err_)  > 10**(-3)
         err = err_
         S.p = p
     #####################################    
     p = S.p
     S.p = e1
+    cost = 10**(10)
     condition = True
-    cost = 1e10
     while condition:
-        cost_ = np.mean( np.arccos( np.matmul(X.T,p) )**2 )
-        condition = np.abs(cost_-cost)  > 1e-14
+        tmp = np.matmul(X.T,p)
+        tmp = np.minimum(tmp,1)
+        tmp = np.maximum(tmp,-1)
+        cost_ = np.mean( np.arccos( tmp )**2 )
+        condition = np.abs(cost_-cost)  > 10**(-10)
+        #print(cost_-cost)
         cost = cost_
-        Vp = spherical_log(p.reshape(D+1,1),S)
+        p_v = spherical_log( p.reshape(D+1,1),S )
         g = np.zeros((D+1,1))
+        #compute gradient
         for i in range(D):
-            x = Vp
+            x = p_v
             x[i+1,0] = x[i+1,0] + eps
-            pi = spherical_exp(x,S) 
-            cost_ = np.mean( np.arccos( np.matmul(X.T,pi) )**2 )
-            g[i+1,0] = (cost_ - cost)/eps
-        p = spherical_exp(Vp -0.1*g,S) 
+            p_ = spherical_exp(x,S) 
+            tmp = np.matmul( X.T,p_ )
+            tmp = np.minimum(tmp,1)
+            tmp = np.maximum(tmp,-1)
+            cost_i = np.mean( np.arccos( tmp )**2 )
+            g[i+1,0] = (cost_i - cost)/eps
+        p = spherical_exp(p_v-0.01*g,S) 
     S.p = np.concatenate(p)
     V = spherical_log(X,S)
     evals , evecs = np.linalg.eig( np.matmul(V,V.T))
@@ -464,6 +489,7 @@ def subspace_dist(S,S_):
     T = np.matmul(H.T,H_)
     #####################################
     SVs = scipy.linalg.svdvals(T)
+    #print(SVs)
     #print(T)
     #print(SVs)
     SVs = np.minimum(SVs,1)
