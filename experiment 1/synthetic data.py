@@ -6,15 +6,22 @@ import scipy.linalg
 ##############################################################
 class parameters:
     def __init__(self):
-        self.N = 10000 ## no. of points
-        self.D = 1000 ## input dimension
-        self.d = 10 ## target dimension
-        self.sigma = 00 # noise std
+        self.N = 400 ## no. of points
+        self.D = 10 ## input dimension
+        self.d = 1 ## target dimension
+        self.sigma = .1 # noise std
 param = parameters()
 ##############################################################
 # parameters to save:
 # S, X, noise_lvl_input, param
 # for each algorithm save: S_, noise_lvl_output, dist
+
+# X , S, noise_lvl_input = sfpca.random_hyperbolic_data(param)
+# X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
+# noise_lvl_output = sfpca.compute_H_noise_lvl(X_,S)
+# a = sfpca.subspace_dist_H(S,S_,param)
+# print(noise_lvl_input)
+# print(noise_lvl_output)
 
 # name: spca
 X , S, noise_lvl_input = sfpca.random_spherical_data(param)
@@ -26,6 +33,7 @@ print(noise_lvl_output)
 print(dist)
 
 # name: liu
+
 X_, S_ = sfpca.estimate_spherical_subspace_liu(X,param)
 noise_lvl_output = sfpca.compute_noise_lvl(X_,S)
 dist = sfpca.subspace_dist(S,S_)
@@ -41,6 +49,9 @@ print(dist)
 # print(noise_lvl_input)
 # print(noise_lvl_output)
 # print(dist)
+
+
+
 
 # # name: dai
 # X_, S_ = sfpca.estimate_spherical_subspace_dai(X,param)
