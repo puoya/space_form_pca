@@ -72,3 +72,13 @@ def daiFromData(X, S, param):
     dist = sfpca.subspace_dist(S,S_)
 
     return noise_lvl_output, dist, S_, runtime
+
+def liuFromData(X, S, param, mode):
+    start = time.time()
+    X_, S_ = sfpca.estimate_spherical_subspace_liu(X,param, mode)
+    end = time.time()
+    runtime = round(end - start, 5) #runtime in seconds 
+    noise_lvl_output = sfpca.compute_noise_lvl(X_,S)
+    dist = sfpca.subspace_dist(S,S_)
+
+    return noise_lvl_output, dist, S_, runtime

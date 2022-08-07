@@ -58,7 +58,7 @@ def D_Exp():
 
 def d_Exp(): 
     #initial path to directory 
-    path = '/mirarablab_data/sfpca/D_exp_/'
+    path = '/mirarablab_data/sfpca/d_exp/'
 
     N = 10**4
     D = 100
@@ -99,7 +99,7 @@ def d_Exp():
 
 def N_Exp(): 
     #initial path to directory 
-    path = '/mirarablab_data/sfpca/D_exp_/'
+    path = '/mirarablab_data/sfpca/N_exp/'
 
     D = 100
     d = 1
@@ -142,7 +142,7 @@ def N_Exp():
 
 def std_exp():
     #initial path to directory 
-    path = '/mirarablab_data/sfpca/D_exp_/'
+    path = '/mirarablab_data/sfpca/std_exp/'
 
     long_std_range = np.arange(0.05, 5.02, 0.05)
 

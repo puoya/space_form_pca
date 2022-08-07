@@ -19,7 +19,7 @@ def readData(path):
         return pd.read_pickle(path)
 
 
-def D_Exp(exp, start, end): 
+def D_Exp(start, end, exp): 
     #initial path to directory 
     path = '/mirarablab_data/sfpca/D_exp_/'
 
@@ -47,9 +47,21 @@ def D_Exp(exp, start, end):
                 elif(exp == 2):
                     fullPath = path + currFolder + str(iter+1) + '/spga/'
                     noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
-                else: 
+                elif(exp == 3): 
                     fullPath = path + currFolder + str(iter+1) + '/dai/'
                     noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+                elif(exp == 4):
+                    fullPath = path + currFolder + str(iter+1) + '/spga_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
+                elif(exp == 5):
+                    fullPath = path + currFolder + str(iter+1) + '/dai_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+                elif(exp == 6):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode1/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 1)  
+                elif(exp == 7):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode2/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 2) 
 
                 #creating folder if it doesn't exist
                 try:
@@ -62,7 +74,7 @@ def D_Exp(exp, start, end):
                 np.save(fullPath + 'S_', S_)   
                 np.save(fullPath + 'runtime', runtime)    
 
-def d_Exp(exp, start, end): 
+def d_Exp(start, end, exp): 
     #initial path to directory 
     path = '/mirarablab_data/sfpca/d_exp/'
 
@@ -90,9 +102,21 @@ def d_Exp(exp, start, end):
                 elif(exp == 2):
                     fullPath = path + currFolder + str(iter+1) + '/spga/'
                     noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
-                else: 
+                elif(exp == 3): 
                     fullPath = path + currFolder + str(iter+1) + '/dai/'
                     noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+                elif(exp == 4):
+                    fullPath = path + currFolder + str(iter+1) + '/spga_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
+                elif(exp == 5):
+                    fullPath = path + currFolder + str(iter+1) + '/dai_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+                elif(exp == 6):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode1/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 1)  
+                elif(exp == 7):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode2/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 2) 
 
                 #creating folder if it doesn't exist
                 try:
@@ -105,7 +129,7 @@ def d_Exp(exp, start, end):
                 np.save(fullPath + 'S_', S_)   
                 np.save(fullPath + 'runtime', runtime)        
 
-def N_Exp(exp, start, end): 
+def N_Exp(start, end, exp): 
     #initial path to directory 
     path = '/mirarablab_data/sfpca/N_exp/'
 
@@ -133,10 +157,21 @@ def N_Exp(exp, start, end):
                 elif(exp == 2):
                     fullPath = path + currFolder + str(iter+1) + '/spga/'
                     noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
-                else: 
+                elif(exp == 3): 
                     fullPath = path + currFolder + str(iter+1) + '/dai/'
                     noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
-
+                elif(exp == 4):
+                    fullPath = path + currFolder + str(iter+1) + '/spga_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
+                elif(exp == 5):
+                    fullPath = path + currFolder + str(iter+1) + '/dai_new/'
+                    noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+                elif(exp == 6):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode1/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 1)  
+                elif(exp == 7):
+                    fullPath = path + currFolder + str(iter+1) + '/liu_mode2/'
+                    noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 2)                 
                 #creating folder if it doesn't exist
                 try:
                     os.mkdir(fullPath)
@@ -148,7 +183,7 @@ def N_Exp(exp, start, end):
                 np.save(fullPath + 'S_', S_)   
                 np.save(fullPath + 'runtime', runtime)   
 
-def std_Exp(exp, start, end): 
+def std_Exp(start, end, exp): 
     #initial path to directory 
     path = '/mirarablab_data/sfpca/std_exp/'
 
@@ -179,9 +214,21 @@ def std_Exp(exp, start, end):
             elif(exp == 2):
                 fullPath = path + currFolder + str(iter+1) + '/spga/'
                 noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
-            else: 
+            elif(exp == 3): 
                 fullPath = path + currFolder + str(iter+1) + '/dai/'
                 noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+            elif(exp == 4):
+                fullPath = path + currFolder + str(iter+1) + '/spga_new/'
+                noise_lvl_output, dist, S_, runtime = sd.spgaFromData(X, S, param)
+            elif(exp == 5):
+                fullPath = path + currFolder + str(iter+1) + '/dai_new/'
+                noise_lvl_output, dist, S_, runtime = sd.daiFromData(X, S, param)
+            elif(exp == 6):
+                fullPath = path + currFolder + str(iter+1) + '/liu_mode1/'
+                noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 1)  
+            elif(exp == 7):
+                fullPath = path + currFolder + str(iter+1) + '/liu_mode2/'
+                noise_lvl_output, dist, S_, runtime = sd.liuFromData(X, S, param, 2) 
 
             #creating folder if it doesn't exist
             try:
@@ -197,43 +244,112 @@ def std_Exp(exp, start, end):
 
 start = time.time()
 #first param is start iteration, second param is end iteration (inclusive), third is experiment 
+################# spca ###################
 D_Exp(0, 99,1)
-N_Exp(0, 99,1)
-d_Exp(0, 99,1)
-std_Exp(0, 99, 1)
+# N_Exp(0, 99,1)
+# d_Exp(0, 99,1)
+# std_Exp(0, 99, 1)
 
-#####################################
-D_Exp(0, 30,2)
-D_Exp(31, 60,2)
-D_Exp(61, 99,2)
+############### pga #####################
+# D_Exp(0, 30,2)
+# D_Exp(31, 60,2)
+# D_Exp(61, 99,2)
 
-N_Exp(0, 30,2)
-N_Exp(31, 60,2)
-N_Exp(61, 99,2)
+# N_Exp(0, 30,2)
+# N_Exp(31, 60,2)
+# N_Exp(61, 99,2)
 
-d_Exp(0, 30,2)
-d_Exp(31, 60,2)
-d_Exp(61, 99,2)
+# d_Exp(0, 30,2)
+# d_Exp(31, 60,2)
+# d_Exp(61, 99,2)
 
-std_Exp(0, 30,2)
-std_Exp(31, 60,2)
-std_Exp(61, 99,2)
-####################################
-D_Exp(0, 30,3)
-D_Exp(31, 60,3)
-D_Exp(61, 99,3)
+# std_Exp(0, 30,2)
+# std_Exp(31, 60,2)
+# std_Exp(61, 99,2)
+############## dai ######################
+# D_Exp(0, 30,3)
+# D_Exp(31, 60,3)
+# D_Exp(61, 99,3)
 
-N_Exp(0, 30,3)
-N_Exp(31, 60,3)
-N_Exp(61, 99,3)
+# N_Exp(0, 30,3)
+# N_Exp(31, 60,3)
+# N_Exp(61, 99,3)
 
-d_Exp(0, 30,3)
-d_Exp(31, 60,3)
-d_Exp(61, 99,3)
+# d_Exp(0, 30,3)
+# d_Exp(31, 60,3)
+# d_Exp(61, 99,3)
 
-std_Exp(0, 30,3)
-std_Exp(31, 60,3)
-std_Exp(61, 99,3)
+# std_Exp(0, 30,3)
+# std_Exp(31, 60,3)
+# std_Exp(61, 99,3)
+
+############## pga new ######################
+# D_Exp(0, 30,4)
+# D_Exp(31, 60,4)
+# D_Exp(61, 99,4)
+
+# N_Exp(0, 30,4)
+# N_Exp(31, 60,4)
+# N_Exp(61, 99,4)
+
+# d_Exp(0, 30,4)
+# d_Exp(31, 60,4)
+# d_Exp(61, 99,4)
+
+# std_Exp(0, 30,4)
+# std_Exp(31, 60,4)
+# std_Exp(61, 99,4)
+
+############## dai new ######################
+# D_Exp(0, 30,5)
+# D_Exp(31, 60,5)
+# D_Exp(61, 99,5)
+
+# N_Exp(0, 30,5)
+# N_Exp(31, 60,5)
+# N_Exp(61, 99,5)
+
+# d_Exp(0, 30,5)
+# d_Exp(31, 60,5)
+# d_Exp(61, 99,5)
+
+# std_Exp(0, 30,5)
+# std_Exp(31, 60,5)
+# std_Exp(61, 99,5)
+
+############## liu mode 1 ######################
+# D_Exp(0, 30,6)
+# D_Exp(31, 60,6)
+# D_Exp(61, 99,6)
+
+# N_Exp(0, 30,6)
+# N_Exp(31, 60,6)
+# N_Exp(61, 99,6)
+
+# d_Exp(0, 30,6)
+# d_Exp(31, 60,6)
+# d_Exp(61, 99,6)
+
+# std_Exp(0, 30,6)
+# std_Exp(31, 60,6)
+# std_Exp(61, 99,6)
+
+############## liu mode 2 ######################
+# D_Exp(0, 30,7)
+# D_Exp(31, 60,7)
+# D_Exp(61, 99,7)
+
+# N_Exp(0, 30,7)
+# N_Exp(31, 60,7)
+# N_Exp(61, 99,7)
+
+# d_Exp(0, 30,7)
+# d_Exp(31, 60,7)
+# d_Exp(61, 99,7)
+
+# std_Exp(0, 30,7)
+# std_Exp(31, 60,7)
+# std_Exp(61, 99,7)
 
 
 end = time.time()
