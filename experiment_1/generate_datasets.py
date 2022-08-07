@@ -1,6 +1,7 @@
 import numpy as np
 import time 
 import synthetic_data as sd
+import pandas as pd
 import os
 
 # num trials for each experiment
@@ -16,7 +17,7 @@ N_range = ([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000,
 ##############################################################
 def D_Exp(): 
     #initial path to directory 
-    path = '/calab_data/mirarab/home/mmkhanza/sphericalPCA/datasets/D_exp_/'
+    path = '/mirarablab_data/sfpca/D_exp_/'
     N = 10**4
     d = 1
     for sigma in stdRange:
@@ -35,8 +36,8 @@ def D_Exp():
                 res = sd.experimentDataset(N, D, d, sigma) 
                 #adding param.npy on first iteration 
                 if(iter == 0):
-                    fullPath = path + currFolder + 'param'
-                    np.save(fullPath, res[3])
+                    fullPath = path + currFolder + 'param.pkl'
+                    pd.to_pickle(res[3], fullPath)
 
                 #creating folder for experiment number if it doesn't exist
                 expFolder = fullPath = path + currFolder + str(iter+1) 
@@ -48,8 +49,8 @@ def D_Exp():
                 fullPath = path + currFolder + str(iter+1) + '/' + 'X'
                 np.save(fullPath, res[0])
 
-                fullPath = path + currFolder + str(iter+1) + '/' + 'S'
-                np.save(fullPath, res[1])
+                fullPath = path + currFolder + str(iter+1) + '/' + 'S.pkl'
+                pd.to_pickle(res[1], fullPath)
 
                 fullPath = path + currFolder + str(iter+1) + '/' + 'noise_level_input'
                 np.save(fullPath, res[2])
@@ -57,7 +58,7 @@ def D_Exp():
 
 def d_Exp(): 
     #initial path to directory 
-    path = '/calab_data/mirarab/home/mmkhanza/sphericalPCA/datasets/d_exp/'
+    path = '/mirarablab_data/sfpca/D_exp_/'
 
     N = 10**4
     D = 100
@@ -77,8 +78,8 @@ def d_Exp():
                 res = sd.experimentDataset(N, D, d, sigma) 
                 #adding param.npy on first iteration 
                 if(iter == 0):
-                    fullPath = path + currFolder + 'param'
-                    np.save(fullPath, res[3])
+                    fullPath = path + currFolder + 'param.pkl'
+                    pd.to_pickle(res[3], fullPath)
 
                 #creating folder for experiment number if it doesn't exist
                 expFolder = fullPath = path + currFolder + str(iter+1) 
@@ -90,15 +91,15 @@ def d_Exp():
                 fullPath = path + currFolder + str(iter+1) + '/' + 'X'
                 np.save(fullPath, res[0])
 
-                fullPath = path + currFolder + str(iter+1) + '/' + 'S'
-                np.save(fullPath, res[1])
+                fullPath = path + currFolder + str(iter+1) + '/' + 'S.pkl'
+                pd.to_pickle(res[1], fullPath)
 
                 fullPath = path + currFolder + str(iter+1) + '/' + 'noise_level_input'
                 np.save(fullPath, res[2])
 
 def N_Exp(): 
     #initial path to directory 
-    path = '/calab_data/mirarab/home/mmkhanza/sphericalPCA/datasets/N_exp/'
+    path = '/mirarablab_data/sfpca/D_exp_/'
 
     D = 100
     d = 1
@@ -119,8 +120,8 @@ def N_Exp():
                 res = sd.experimentDataset(N, D, d, sigma) 
                 #adding param.npy on first iteration 
                 if(iter == 0):
-                    fullPath = path + currFolder + 'param'
-                    np.save(fullPath, res[3])
+                    fullPath = path + currFolder + 'param.pkl'
+                    pd.to_pickle(res[3], fullPath)
 
                 #creating folder for experiment number if it doesn't exist
                 expFolder = fullPath = path + currFolder + str(iter+1) 
@@ -132,8 +133,8 @@ def N_Exp():
                 fullPath = path + currFolder + str(iter+1) + '/' + 'X'
                 np.save(fullPath, res[0])
 
-                fullPath = path + currFolder + str(iter+1) + '/' + 'S'
-                np.save(fullPath, res[1])
+                fullPath = path + currFolder + str(iter+1) + '/' + 'S.pkl'
+                pd.to_pickle(res[1], fullPath)
 
                 fullPath = path + currFolder + str(iter+1) + '/' + 'noise_level_input'
                 np.save(fullPath, res[2])               
@@ -141,7 +142,7 @@ def N_Exp():
 
 def std_exp():
     #initial path to directory 
-    path = '/calab_data/mirarab/home/mmkhanza/sphericalPCA/datasets/std_exp/'
+    path = '/mirarablab_data/sfpca/D_exp_/'
 
     long_std_range = np.arange(0.05, 5.02, 0.05)
 
@@ -159,14 +160,14 @@ def std_exp():
             os.mkdir(path+currFolder)
         except:
             pass   
-        
+
         for iter in range(numIterations):
             # X, S, noise_level, param
             res = sd.experimentDataset(N, D, d, sigma) 
             #adding param.npy on first iteration 
             if(iter == 0):
-                fullPath = path + currFolder + 'param'
-                np.save(fullPath, res[3])
+                fullPath = path + currFolder + 'param.pkl'
+                pd.to_pickle(res[3], fullPath)
 
             #creating folder for experiment number if it doesn't exist
             expFolder = fullPath = path + currFolder + str(iter+1) 
@@ -178,19 +179,12 @@ def std_exp():
             fullPath = path + currFolder + str(iter+1) + '/' + 'X'
             np.save(fullPath, res[0])
 
-            fullPath = path + currFolder + str(iter+1) + '/' + 'S'
-            np.save(fullPath, res[1])
+            fullPath = path + currFolder + str(iter+1) + '/' + 'S.pkl'
+            pd.to_pickle(res[1], fullPath)
 
             fullPath = path + currFolder + str(iter+1) + '/' + 'noise_level_input'
             np.save(fullPath, res[2]) 
     
-
-
-"""
-Below runs each of the experiments and times it. You may want 
-to run one at a time due to the amount of time it takes for 
-each experiment to run. 
-"""
 
 start = time.time()
 D_Exp()
