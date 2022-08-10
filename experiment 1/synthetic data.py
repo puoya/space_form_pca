@@ -6,7 +6,7 @@ import scipy.linalg
 ##############################################################
 class parameters:
     def __init__(self):
-        self.N = 100000 ## no. of points
+        self.N = 1000 ## no. of points
         self.D = 100 ## input dimension
         self.d = 10 ## target dimension
         self.sigma = .01 # noise std
@@ -21,11 +21,13 @@ J = np.eye(param.D+1)
 J[0,0] = -1
 print(noise_lvl_input)
 #print( np.matmul(np.matmul(X.T,J),X) )
-#X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
+X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
 #noise_lvl_output = sfpca.compute_H_noise_lvl(X_,S)
 #a = sfpca.subspace_dist_H(S,S_,param)
 #print(noise_lvl_input)
 #print(noise_lvl_output)
+
+
 
 # name: spca
 # X , S, noise_lvl_input = sfpca.random_spherical_data(param)
