@@ -80,17 +80,17 @@ def random_spherical_subspace(param):
     return S
 ###########################################################################
 def random_hyperbolic_subspace(param):
-    H,p = random_J_orthogonal_matrix(param)
+    Hp,p = random_J_orthogonal_matrix(param)
     #####################################
     S = subspace()
-    S.Hp = H
+    S.Hp = Hp
     S.p = p
-    S.H = np.concatenate((p,H),1)
+    S.H = np.concatenate((p,Hp),1)
     #####################################
-    # J = np.eye(101)
-    # J[0,0] = -1
-    # H_ = S.H
-    # print(np.matmul(H_.T, np.matmul(J,H_)) )
+    #J = np.eye(101)
+    #J[0,0] = -1
+    #H_ = S.H
+    #print(np.matmul(H_.T, np.matmul(J,H_)) )
     return S
 ###########################################################################
 def random_spherical_tangents(S,param):
@@ -127,11 +127,11 @@ def random_hyperbolic_tangents(S,param):
     J = np.eye(D+1)
     J[0,0] = -1
     #####################################
-    y = np.random.normal(0, np.pi/4, (d,N))
+    y = np.random.normal(0, 1, (d,N))
     Vt = np.matmul(Hp,y)
     #####################################
     Pp_perp = np.eye(D+1)+np.matmul(np.matmul(p,p.T),J)
-    noise = sigma*np.random.normal(0, np.pi/4, (D+1,N))
+    noise = sigma*np.random.normal(0, 1, (D+1,N))
     noise = np.matmul(Pp_perp,noise)
     #####################################
     Vt = Vt + noise
