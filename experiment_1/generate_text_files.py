@@ -32,7 +32,7 @@ def createDataFile(path, expName, d, D, N, sigma):
             continue
         if (pathExists(path + str(iter)+ '/noise_level_input.npy') == False):
             continue
-        noise_lvl_input = str(readData(path + str(iter)+ '/noise_level_input.npy'))
+        noise_lvl_input = str(readData(path + str(iter+1)+ '/noise_level_input.npy'))
 
         if (pathExists(expPath+'noise_lvl_output.npy') == False):
             continue
