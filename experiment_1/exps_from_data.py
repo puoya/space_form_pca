@@ -4,7 +4,7 @@ import synthetic_data as sd
 import pandas as pd
 import os
 
-#range of values to useof the parameters
+#range of values to use of the parameters
 stdRange = [0.01, 0.05, 0.1] 
 D_range = [2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 d_range = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90]
