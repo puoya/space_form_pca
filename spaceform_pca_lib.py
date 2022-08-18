@@ -163,6 +163,9 @@ def hyperbolic_exp(Vt,S):
       norm_v = np.sqrt(J_norm(v,D))
       x = np.cosh(norm_v)*p+(np.sinh(norm_v)/norm_v)*v
       norm_x = J_norm(x,D)
+      if norm_x > 0:
+        print('ayyy')
+      #print(norm_x)
       X[:,n] = x/np.sqrt(-norm_x)
     return X
 ###########################################################################
@@ -176,6 +179,22 @@ def spherical_log(X,S):
       x = X[:,n]
       theta = np.arccos( np.matmul(x.T,p) )
       V[:,n] = ( theta/np.sin(theta) ) * ( x-p*np.cos(theta) )
+    return V
+###########################################################################
+def hyperbolic_log(X,S):
+    p = S.p
+    #####################################
+    D = np.shape(X)[0]-1
+    N = np.shape(X)[1]
+    V = np.zeros( (D+1,N) )
+    J = np.eye(D+1)
+    J[0,0] = -1
+    for n in range(N):
+      x = X[:,n]
+      theta = -np.matmul(np.matmul(x.T,J),p)
+      theta = np.maximum(theta, 1)
+      theta = np.arccosh( theta )
+      V[:,n] = ( theta/np.sinh(theta) ) * ( x-p*np.cosh(theta) )
     return V
 ###########################################################################
 def random_spherical_data(param):
@@ -273,10 +292,15 @@ def estimate_hyperbolic_subspace(X,param):
     #####################################
     X_ = np.matmul(np.matmul(H.T, J), X)
     X_ = np.matmul(H,np.matmul(Jd,X_))
+    # X_ = np.matmul(np.matmul(H.T, np.eye(D+1)), X)
+    # X_ = np.matmul(H,np.matmul(np.eye(d+1),X_))
     for n in range(N):
         x = X_[:,n]
         norm_x = J_norm(x,D)
+        if norm_x > 0:
+            print('noo')
         X_[:,n] =  x/np.sqrt(-norm_x)
+    #print(X_)
     #####################################
     S.H = H
     S.p = p
@@ -298,7 +322,7 @@ def compute_J_evs(Cx,d):
         condition_i = True
         count_i = 0
         count = count + 1 
-        print(count)
+        #print(count)
         #print(J_norm(v,D))
         while condition_i:
             count_i = count_i + 1
@@ -414,7 +438,7 @@ def estimate_spherical_subspace_pga(X,param):
         p = np.concatenate( spherical_exp(delta_p,S) )
         err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
         ########## new line ###################
-        condition = np.abs(err-err_)  > 10**(-3)
+        condition = np.abs(err-err_)  > 10**(-10)
         ########## new line ###################
         err = err_
         S.p = p
@@ -434,6 +458,47 @@ def estimate_spherical_subspace_pga(X,param):
     S.H = H
     Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
     X_ = spherical_exp(Vt,S)
+    return X_,S
+########################################################################### 
+def estimate_hyperbolic_subspace_pga(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    tau = 0.1
+    ########## new line ###################
+    p = np.mean(X,1)
+    ########## new line ###################
+    S.p  = p/np.sqrt(-J_norm(p,D))
+    err = 1
+    condition = True
+    while condition:
+        V = hyperbolic_log(X,S)
+        delta_p = tau * np.mean(V,1)
+        delta_p = delta_p.reshape(D+1,1)
+        p = np.concatenate( hyperbolic_exp(delta_p,S) )
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        ########## new line ###################
+        condition = np.abs(err-err_)  > 10**(-3)
+        ########## new line ###################
+        err = err_
+        S.p = p
+    #####################################    
+    V = hyperbolic_log(X,S)
+    evals , evecs = np.linalg.eig( np.matmul(V,V.T))
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    Hp = evecs[:,0:d]
+    S.Hp = Hp
+    p = S.p
+    H = np.concatenate( (p.reshape(D+1,1),Hp),axis = 1)
+    S.H = H
+    Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
+    X_ = hyperbolic_exp(Vt,S)
     return X_,S
 ########################################################################### 
 def estimate_spherical_subspace_pga_2(X,param):

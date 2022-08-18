@@ -6,28 +6,29 @@ import scipy.linalg
 ##############################################################
 class parameters:
     def __init__(self):
-        self.N = 1000 ## no. of points
-        self.D = 10000 ## input dimension
+        self.N = 10000 ## no. of points
+        self.D = 10 ## input dimension
         self.d = 1 ## target dimension
-        self.sigma = .5 # noise std
+        self.sigma = .01 # noise std
 param = parameters()
 ##############################################################
 # parameters to save:
 # S, X, noise_lvl_input, param
 # for each algorithm save: S_, noise_lvl_output, dist
 X , S, noise_lvl_input = sfpca.random_hyperbolic_data(param)
-print(noise_lvl_input)
+#H1 = S.H
+#print(noise_lvl_input)
 #print( np.matmul(np.matmul(X.T,J),X) )
 #X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
 X_, S_ = sfpca.estimate_hyperbolic_subspace_pga(X,param)
 noise_lvl_output = sfpca.compute_H_noise_lvl(X_,S)
 #a = sfpca.subspace_dist_H(S,S_,param)
-#print(noise_lvl_input)
+print(noise_lvl_input)
 print(noise_lvl_output)
 
-X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
-noise_lvl_output = sfpca.compute_H_noise_lvl(X_,S)
-print(noise_lvl_output)
+# X_, S_ = sfpca.estimate_hyperbolic_subspace(X,param)
+# noise_lvl_output = sfpca.compute_H_noise_lvl(X_,S)
+# print(noise_lvl_output)
 
 
 # name: spca
