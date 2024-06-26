@@ -33,11 +33,19 @@ def main(args):
 
     # Perform tasks based on the specified method
     if method in ['sfpca','horopca', 'bsa', 'pga']:
-        sfpca.extract_trees(dataset_name)
-        sfpca.process_all_trees(dataset_name)
-        sfpca.compute_pca_results(dataset_name, method)
-        sfpca.compute_mds_results(dataset_name, method)
-        sfpca.compute_quartet_results(dataset_name, method)
+        # sfpca.extract_trees(dataset_name)
+        # sfpca.process_all_trees(dataset_name)
+        # sfpca.compute_pca_results(dataset_name, method)
+        # sfpca.compute_mds_results(dataset_name, method)
+        # sfpca.compute_quartet_results(dataset_name, method)
+        dataset_name = "GUniFrac"
+        dataset_name = "doi_10_5061_dryad_pk75d__v20150519"
+        dataset_name = "document"
+        #sfpca.run_spherical_mds(dataset_name)
+        #sfpca.run_spherical_classifier(dataset_name)
+        #sfpca.run_spherical_information(dataset_name)
+        sfpca.run_spherical_sparsity(dataset_name)
+        
     else:
         logging.error(f"Method '{method}' is not supported.")
 

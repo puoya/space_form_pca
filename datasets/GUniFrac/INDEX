@@ -1,0 +1,37 @@
+GMPR                    Geometric Mean of Pairwise Ratios (GMPR)
+                        Normalization for Zero-inflated Count Data
+GUniFrac                Generalized UniFrac distances for comparing
+                        microbial communities.
+PermanovaG              Permutational Multivariate Analysis of Variance
+                        Using Multiple Distance Matrices
+PermanovaG2             Permutational Multivariate Analysis of Variance
+                        Using Multiple Distance Matrices(Freedman-Lane
+                        Permutation)
+Rarefy                  Rarefy a Count Table to Equal Sequencing Depth
+SimulateMSeq            A Semiparametric Model-based Microbiome
+                        Sequencing Data Simulator for Cross-sectional
+                        and Case-control Studies
+SimulateMSeqC           A Semiparametric Model-based Microbiome
+                        Sequencing Data Simulator for Longitudinal,
+                        Matched-pair, and Replicate Sampling Designs
+ZicoSeq                 A linear Model-based Permutation Test for
+                        Differential Abundance Analysis of Microbiome
+                        Data and Other Omics Data
+ZicoSeq.plot            A Plot Function for Visualizing the ZicoSeq
+                        Results
+adonis3                 Permutational Multivariate Analysis of Variance
+                        Using Distance Matrices (Freedman-Lane
+                        permutation)
+dICC                    Distance-based Intra-Class Correlation
+                        Coefficient
+dICC.SE.asympt          Asymptotic Standard Error of Distance-based
+                        Intra-Class Correlation Coefficient
+dICC.SE.bt              Bootstrap Standard Error of Distance-based
+                        Intra-Class Correlation Coefficient
+dmanova                 Distance-based Multivariate Analysis of
+                        Variance (Analytical P-value Calculation)
+stool.otu.tab           Stool Microbiome OTU Count Table
+throat.meta             Throat Microbiome Meta Data
+throat.otu.tab          Throat Microbiome OTU Count Table
+throat.tree             UPGMA Tree of Throat Microbiome OTUs
+vaginal.otu.tab         Vaginal Microbiome OTU Count Table

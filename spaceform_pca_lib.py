@@ -1,8 +1,12 @@
 import os
+import sys
 import glob
 import torch
 import pickle
 import logging
+
+
+import scipy.stats as stats
 
 import numpy as np
 import pandas as pd
@@ -12,6 +16,7 @@ from tqdm import tqdm
 from Bio import Phylo
 from pathlib import Path
 
+from scipy.stats import wasserstein_distance
 import geom.poincare as poincare
 import geom.euclidean as euclidean
 from learning.frechet import Frechet
@@ -20,6 +25,26 @@ import geom.hyperboloid as hyperboloid
 from geom.horo import busemann, project_kd
 from learning.pca import EucPCA, TangentPCA,PGA, HoroPCA, BSA
 from utils.metrics import compute_metrics
+
+
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import accuracy_score
+import spaceform_pca_lib as sfpca
+
+
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.preprocessing import OneHotEncoder
+from scipy.stats import pearsonr
+
+
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 ###########################################################################
 ###########################################################################
 ###########################################################################
@@ -1732,5 +1757,1427 @@ def run_dimensionality_reduction(model_type, X):
     else:
         logging.info(f"Model {model_type} is not implemented.")
         return np.nan, np.nan
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
 
+######################################################################
+######################################################################
+######################################################################
+def distance_distortion(DM1, DM2):
+    distortion = np.linalg.norm(DM1 - DM2)/ np.linalg.norm(DM2) * 100
+    return distortion
+######################################################################
+######################################################################
+######################################################################
+def total_wasserstein_distance(X, Y):
+    X = X.T
+    Y = Y.T
+    X = X**2
+    Y = Y**2
+    # Initialize total distance
+    total_distance = 0.0
+    for x, y in zip(X, Y):
+        distance = wasserstein_distance(x, y)
+        total_distance += distance
+    return total_distance
+######################################################################
+######################################################################
+######################################################################
+def total_variation_distance(X, Y):
+    X = X.T
+    Y = Y.T
+    X = X**2
+    Y = Y**2
+    # Initialize total distance
+    total_distance = 0.0
+    # Iterate over each pair of distributions
+    for x, y in zip(X, Y):
+        # Compute Wasserstein distance between the distributions
+        distance = total_variation(x, y)
+        # Add the distance to the total
+        total_distance += distance
+    return total_distance
+######################################################################
+######################################################################
+######################################################################
+def total_distance(X, Y):
+    X = X.T
+    Y = Y.T
+    # Initialize total distance
+    total_distance = 0.0
+    # Iterate over each pair of distributions
+    for x, y in zip(X, Y):
+        # Compute Wasserstein distance between the distributions
+        g = np.matmul(x.T, y)
+        g = max(g,-1)
+        g = min(g,1)
+        distance = np.arccos(g)
+        # Add the distance to the total
+        total_distance += distance
+    return total_distance
+######################################################################
+######################################################################
+######################################################################
+def aitchison_distance(x, y):
+    D = len(x)
+    x = np.array(x)+min(10**(-6), 0.01/D)
+    y = np.array(y)+min(10**(-6), 0.01/D)
+    # Pseudo-inverse of the compositions
+    inv_x = np.log(x / stats.gmean(x))
+    inv_y = np.log(y / stats.gmean(y))
+    # Compute the Aitchison distance
+    dist = np.sqrt(np.sum((inv_x - inv_y) ** 2))
+    return dist
+######################################################################
+######################################################################
+######################################################################
+def kl_divergence(p, q):
+    D = len(p)
+    p = np.array(p, dtype=np.float64) + min(10**(-6), 0.01/D)
+    q = np.array(q, dtype=np.float64) + min(10**(-6), 0.01/D)
+    
+    # Compute the KL divergence
+    return np.sum(p * np.log(p / q))
+######################################################################
+######################################################################
+######################################################################
+def total_variation(p, q):
+    """Compute the Total Variation distance between two distributions."""
+    return 0.5 * np.sum(np.abs(p - q))
+######################################################################
+######################################################################
+######################################################################
+def total_aitchison_distance(X, Y):
+    X = X.T
+    Y = Y.T
+    X = X**2
+    Y = Y**2
+    # Initialize total distance
+    total_distance = 0.0
+    # Iterate over each pair of compositions
+    for x, y in zip(X, Y):
+        # Compute Aitchison distance between the compositions
+        distance = aitchison_distance(x, y)
+        # Add the distance to the total
+        total_distance += distance
+    return total_distance
+######################################################################
+######################################################################
+######################################################################
+def jensen_shannon_divergence(p, q):
+    m = 0.5 * (p + q)
+    return 0.5 * (kl_divergence(p, m) + kl_divergence(q, m))
+######################################################################
+######################################################################
+######################################################################
+def compute_jsdm(X):
+    X = X.T
+    X = X ** 2
+    N = np.shape(X)[0]
+    JSDM = np.zeros((N, N))
+    for i in range(N):
+        x = X[i, :]
+        for j in range(i + 1, N):
+            y = X[j, :]
+            JSDM[i, j] = jensen_shannon_divergence(x, y)
+            JSDM[j, i] = JSDM[i, j]
+    return JSDM
+######################################################################
+######################################################################
+######################################################################
+def compute_tvdm(X):
+    X = X.T
+    X = X**2
+    N = np.shape(X)[0]
+    DM = np.zeros((N,N))
+    for i in range(N):
+        x = X[i,:]
+        for j in range(i+1,N):
+            y = X[j,:]
+            DM[i,j] = total_variation(x, y)
+            DM[j,i] = DM[i,j]
+    return DM
+######################################################################
+######################################################################
+######################################################################
+def compute_kldm(X):
+    X = X.T
+    X = X**2
+    N = np.shape(X)[0]
+    DM = np.zeros((N,N))
+    for i in range(N):
+        x = X[i,:]
+        for j in range(i+1,N):
+            y = X[j,:]
+            DM[i,j] = kl_divergence(x, y)
+            DM[j,i] = DM[i,j]
+    return DM
+######################################################################
+######################################################################
+######################################################################
+def compute_aidm(X):
+    X = X.T
+    X = X**2
+    N = np.shape(X)[0]
+    D = np.shape(X)[1]
+
+    Y = np.zeros((N,D))
+    gmean = np.zeros((N,1))
+    for n in range(N):
+        x = X[n,:]+min(10**(-6), 0.01/D)
+        Y[n,:] = np.log(x/ stats.gmean(x))
+    G = np.matmul(Y,Y.T)
+    dG = np.reshape(np.diag(G), (N,1))
+    dG = np.matmul(dG,np.ones((1,N)) )
+    DM= np.sqrt(-2*G + dG + dG.T)
+    return DM
+######################################################################
+######################################################################
+######################################################################
+def compute_mutual_information(X, y):
+    X = X**2
+    # Compute mutual information
+    mutual_infos = []
+    for label in np.unique(y):
+        y_binary = (y == label).astype(int)
+        mutual_info = mutual_info_classif(X, y_binary)
+        mutual_infos.append(mutual_info)
+    mean_mutual_information = np.mean(mutual_infos)
+    return mean_mutual_information
+######################################################################
+######################################################################
+######################################################################
+def compute_wdm(X):
+    X = X.T
+    X = X**2
+    N = np.shape(X)[0]
+    DM = np.zeros((N,N))
+    for i in range(N):
+        x = X[i,:]
+        for j in range(i+1,N):
+            y = X[j,:]
+            DM[i,j] = wasserstein_distance(x, y)
+            DM[j,i] = DM[i,j]
+    return DM
+######################################################################
+######################################################################
+######################################################################
+# Define the compute_sdm function
+def compute_sdm(X):
+    G = np.matmul(X.T, X)
+    np.clip(G, -1, 1, out=G)
+    DM = np.arccos(G)
+    return DM
+######################################################################
+######################################################################
+######################################################################
+def estimate_spherical_subspace(X,param):
+    S = subspace()
+    d = param.d
+    N = param.N
+    #####################################
+    Cx = np.matmul(X,X.T) #Cx = (Cx + Cx.T)/2
+    evals , evecs = np.linalg.eig(Cx)
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    H = evecs[:,0:d+1]
+    S.H = H
+    S.p = evecs[:,0]
+    p = S.p
+    
+    S.Hp = evecs[:,1:d+1]
+    #####################################
+    PH = np.matmul(H,H.T)
+    X_ = np.matmul(PH,X)
+
+    for n in range(N):
+        x_ = X_[:,n]
+        X_[:,n] =  x_/np.linalg.norm(x_)
+    #####################################
+    return X_,S
+######################################################################
+######################################################################
+######################################################################
+def estimate_spherical_subspace_liu(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    normX = np.linalg.norm(X,'fro') 
+    #####################################
+    ############# mode 1 ################
+    # I = np.eye(D+1)
+    # H = np.random.randn(D+1,d+1)#I[:,0:d+1]
+    # H = I[:,0:d+1]
+    # V = np.random.randn(d+1,N)
+    ############# mode 1 ################
+
+    ############# mode 2 ################
+    X_, S_ = estimate_spherical_subspace(X,param)
+    H = S_.H
+    V = np.matmul(H.T, X)
+    ############# mode 2 ################
+
+    err = 1
+    #####################################
+    lambd = 10*N
+    mu = 10*N
+
+    condition = True
+    err_diff = 0
+    count = 0
+    while condition:
+        count = count + 1
+        X1 = np.matmul(H,V) 
+        err1 = np.linalg.norm(X-X1,'fro')/normX
+
+        V_ = (lambd-2)*V+2*np.matmul(H.T,X)
+        for n in range(N):
+            V_[:,n] = V_[:,n]/np.linalg.norm(V_[:,n])
+        M = 2*np.matmul( (X-np.matmul(H,V_)), V_.T)+mu*H
+        le,_,re = np.linalg.svd(M,full_matrices=False)
+        H_ = np.matmul(le,re)
+
+        X2 = np.matmul(H_,V_)
+        err2 = np.linalg.norm(X-X2,'fro')/normX
+        err_diff = err2-err1
+        err_diff_normal = err_diff*lambd
+        #print(err_diff_normal)
+        # print(lambd)
+        # if np.abs(err_diff_normal) < 1:
+        #     if err_diff_normal < 0:
+        #         lambd = max( lambd + np.sqrt(N/10)*err_diff_normal , N/np.log(N))
+        #         mu = max( mu + np.sqrt(N/10)*err_diff_normal , N/np.log(N))
+
+        
+        
+        condition = (np.abs(err_diff_normal)  > 10**(-3)) or (err_diff > 0)
+
+        V = V_
+        H = H_
+        #print(count)
+        #print(lambd)
+    S.H = H 
+    S.p = H[:,0]
+    S.Hp = H[:,1:d+1]
+    return X2,S
+######################################################################
+######################################################################
+######################################################################
+
+
+
+
+
+def estimate_spherical_subspace_pga(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    tau = 0.1
+    ########## new line ###################
+    p = np.mean(X,1)
+    ########## new line ###################
+    S.p  = p/np.linalg.norm(p)
+    err = 1
+    condition = True
+    while condition:
+        V = spherical_log(X,S)
+        delta_p = tau * np.mean(V,1)
+        delta_p = delta_p.reshape(D+1,1)
+        p = np.concatenate( spherical_exp(delta_p,S) )
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        ########## new line ###################
+        condition = np.abs(err-err_)  > 10**(-10)
+        ########## new line ###################
+        err = err_
+        S.p = p
+    #####################################    
+    V = spherical_log(X,S)
+    evals , evecs = np.linalg.eig( np.matmul(V,V.T))
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    Hp = evecs[:,0:d]
+    S.Hp = Hp
+    p = S.p
+    H = np.concatenate( (p.reshape(D+1,1),Hp),axis = 1)
+    S.H = H
+    Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
+    X_ = spherical_exp(Vt,S)
+    return X_,S
+########################################################################### 
+def estimate_hyperbolic_subspace_pga(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    tau = 0.1
+    ########## new line ###################
+    p = np.mean(X,1)
+    ########## new line ###################
+    S.p  = p/np.sqrt(-J_norm(p,D))
+    err = 1
+    condition = True
+    while condition:
+        V = hyperbolic_log(X,S)
+        delta_p = tau * np.mean(V,1)
+        delta_p = delta_p.reshape(D+1,1)
+        p = np.concatenate( hyperbolic_exp(delta_p,S) )
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        ########## new line ###################
+        condition = np.abs(err-err_)  > 10**(-3)
+        ########## new line ###################
+        err = err_
+        S.p = p
+    #####################################    
+    V = hyperbolic_log(X,S)
+    evals , evecs = np.linalg.eig( np.matmul(V,V.T))
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    Hp = evecs[:,0:d]
+    S.Hp = Hp
+    p = S.p
+    H = np.concatenate( (p.reshape(D+1,1),Hp),axis = 1)
+    S.H = H
+    Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
+    X_ = hyperbolic_exp(Vt,S)
+    return X_,S
+########################################################################### 
+def estimate_spherical_subspace_pga_2(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    tau = 0.1
+
+    p = np.mean(X,1)
+    S.p  = p/np.linalg.norm(p)
+
+    p = S.p
+
+    #p = X[:,0]+0.1
+    #S.p  = p/np.linalg.norm(p)
+    err = 1
+    condition = True
+    while condition:
+        V = spherical_log(X,S)
+        delta_p = tau * np.mean(V,1)
+        delta_p = delta_p.reshape(D+1,1)
+        p = np.concatenate( spherical_exp(delta_p,S) )
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        condition = np.abs(err-err_)  > 10**(-3)
+        err = err_
+        S.p = p
+    #####################################    
+    V = spherical_log(X,S)
+    evals , evecs = np.linalg.eig( np.matmul(V,V.T))
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    Hp = evecs[:,0:d]
+    S.Hp = Hp
+    p = S.p
+    H = np.concatenate( (p.reshape(D+1,1),Hp),axis = 1)
+    S.H = H
+    Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
+    X_ = spherical_exp(Vt,S)
+    return X_,S
+########################################################################### 
+def estimate_spherical_subspace_dai(X,param):
+    S = subspace()
+    d = param.d
+    D = param.D
+    N = param.N
+    #####################################    
+    e1 = np.zeros((D+1,))
+    e1[0] = 1
+    #####################################    
+    tau = 0.1
+    p = X[:,0]+0.1
+    S.p  = p/np.linalg.norm(p)
+    err = 1
+    eps = 10**(-8)
+    condition = True
+    #####################################    
+    while condition:
+        V = spherical_log(X,S)
+        delta_p = tau * np.mean(V,1)
+        delta_p = delta_p.reshape(D+1,1)
+        p = np.concatenate( spherical_exp(delta_p,S) )
+        err_ = np.linalg.norm(p-S.p)/np.sqrt(D+1)
+        condition = np.abs(err-err_)  > 10**(-3)
+        err = err_
+        S.p = p
+    #####################################    
+    p = S.p
+    S.p = e1
+    cost = 10**(10)
+    condition = True
+    cnt = 0
+    step = 1
+    while condition:
+        cnt = cnt + 1
+        tmp = np.matmul(X.T,p)
+        tmp = np.minimum(tmp,1)
+        tmp = np.maximum(tmp,-1)
+        cost_ = np.mean( np.arccos( tmp )**2 )
+        ########## new line ###################
+        step  = 1/cnt 
+        ########## new line ###################
+        cost = cost_
+        p_v = spherical_log( p.reshape(D+1,1),S )
+        g = np.zeros((D+1,1))
+        #compute gradient
+        for i in range(D):
+            x = p_v
+            x[i+1,0] = x[i+1,0] + eps
+            p_ = spherical_exp(x,S) 
+            tmp = np.matmul( X.T,p_ )
+            tmp = np.minimum(tmp,1)
+            tmp = np.maximum(tmp,-1)
+            cost_i = np.mean( np.arccos( tmp )**2 )
+            g[i+1,0] = (cost_i - cost)/eps
+        norm_g = np.linalg.norm(g)
+        condition = norm_g/D > 10**(-2)
+        #print( norm_g/D)
+        p = spherical_exp(p_v-step*g/norm_g,S) 
+    S.p = np.concatenate(p)
+    V = spherical_log(X,S)
+    evals , evecs = np.linalg.eig( np.matmul(V,V.T))
+    evals = np.real(evals)
+    evecs = np.real(evecs)
+    index = np.argsort(-evals)
+    evals = evals[index]
+    evecs = evecs[:,index]
+    #####################################
+    Hp = evecs[:,0:d]
+    S.Hp = Hp
+    p = S.p
+    H = np.concatenate( (p.reshape(D+1,1),Hp),axis = 1)
+    S.H = H
+    Vt = np.matmul( np.matmul(Hp,Hp.T) , V)
+    X_ = spherical_exp(Vt,S)
+    return X_,S
+###########################################################################
+###########################################################################
+###########################################################################
+def random_orthogonal_matrix(param):
+    D = param.D
+    d = param.d
+    
+    # Initialize the matrix H
+    H = np.zeros((D + 1, d + 1))
+    
+    # Iterate over each column of H
+    for i in range(d + 1):
+        # Compute the orthogonal complement
+        PH_perp = np.eye(D + 1) - np.matmul(H, H.T)
+        
+        # Generate a random vector
+        v = np.random.normal(0, 1, (D + 1, 1))
+        
+        # Project the vector onto the orthogonal complement
+        v = np.matmul(PH_perp, v)
+        
+        # Normalize the vector
+        v /= np.linalg.norm(v)
+        
+        # Assign the normalized vector to the corresponding column of H
+        H[:, i] = v[:, 0]
+    
+    return H
+###########################################################################
+###########################################################################
+###########################################################################
+def random_J_orthogonal_matrix(param):
+    D = param.D
+    d = param.d
+    #####################################
+    J = np.eye(D+1)
+    J[0,0] = -1
+    #####################################
+    H = np.zeros((D+1,d))
+    #####################################
+    # generate p
+    condition = True
+    while condition:
+        v = np.random.normal(0, 10, (D+1,1))
+        v[0] = 100*np.random.normal(0, 1)
+        #v[0] = np.sqrt(1+np.linalg.norm(v[1:D+1])**2)
+        norm_v = J_norm(v,D)
+        if norm_v < 0:
+            p = v/np.sqrt(-norm_v)
+            if p[0] < 0:
+                p = -p
+            condition = False
+    #####################################
+    condition = True
+    Pp_perp = np.eye(D+1)+np.matmul(np.matmul(p,p.T),J)
+    i = 0
+    while condition:
+        v = np.random.normal(0, 1, (D+1,1))
+        v = np.matmul(Pp_perp,v)
+        PH_perp = np.eye(D+1)-np.matmul(np.matmul(H,H.T),J)
+        v = np.matmul(PH_perp,v)
+        norm_v = J_norm(v,D)
+        if norm_v > 0:
+            v = v/np.sqrt(norm_v)
+            H[:,i] = v[:,0]
+            i = i +1
+        condition = (i < d)
+    return H,p
+###########################################################################
+###########################################################################
+def random_spherical_subspace(param):
+    H = random_orthogonal_matrix(param)
+    #####################################
+    p = H[:,0]
+    Hp = np.delete(H,0,1)
+    #####################################
+    S = subspace()
+    S.H = H
+    S.Hp = Hp
+    S.p = p
+    #####################################
+    return S
+###########################################################################
+def random_hyperbolic_subspace(param):
+    Hp,p = random_J_orthogonal_matrix(param)
+    #####################################
+    S = subspace()
+    S.Hp = Hp
+    S.p = p
+    S.H = np.concatenate((p,Hp),1)
+    #####################################
+    #J = np.eye(101)
+    #J[0,0] = -1
+    #H_ = S.H
+    #print(np.matmul(H_.T, np.matmul(J,H_)) )
+    return S
+###########################################################################
+def random_spherical_tangents(S,param):
+    N = param.N
+    sigma = param.sigma
+    #####################################
+    Hp = S.Hp
+    p = S.p
+    #####################################
+    D = np.shape(Hp)[0]-1
+    d = np.shape(Hp)[1]
+    #####################################
+    y = np.random.normal(0, np.pi/4, (d,N))
+    Vt = np.matmul(Hp,y)
+    #####################################
+    p_perp = np.eye(D+1)-np.outer(p,p.T)
+    noise = sigma*np.random.normal(0, np.pi/4, (D+1,N))
+    noise = np.matmul(p_perp,noise)
+    #####################################
+    Vt = Vt + noise
+    #####################################
+    return Vt
+###########################################################################
+def random_hyperbolic_tangents(S,param):
+    N = param.N
+    sigma = param.sigma
+    #####################################
+    Hp = S.Hp
+    p = S.p
+    #####################################
+    D = np.shape(Hp)[0]-1
+    d = np.shape(Hp)[1]
+    #####################################
+    J = np.eye(D+1)
+    J[0,0] = -1
+    #####################################
+    y = np.random.normal(0, 1, (d,N))
+    Vt = np.matmul(Hp,y)
+    #####################################
+    Pp_perp = np.eye(D+1)+np.matmul(np.matmul(p,p.T),J)
+    noise = sigma*np.random.normal(0, 1, (D+1,N))
+    noise = np.matmul(Pp_perp,noise)
+    #####################################
+    Vt = Vt + noise
+    #####################################
+    return Vt
+###########################################################################
+def spherical_exp(Vt,S):
+    p = S.p
+    #####################################
+    D = np.shape(Vt)[0]-1
+    N = np.shape(Vt)[1]
+    X = np.zeros( (D+1, N) )
+    for n in range(N):
+      v = Vt[:,n]
+      norm_v = np.linalg.norm(v)
+      x = np.cos(norm_v)*p+(np.sin(norm_v)/norm_v)*v
+      X[:,n] = x #/np.linalg.norm(x)
+    return X
+###########################################################################
+###########################################################################
+def spherical_log(X,S):
+    p = S.p
+    #####################################
+    D = np.shape(X)[0]-1
+    N = np.shape(X)[1]
+    V = np.zeros( (D+1,N) )
+    for n in range(N):
+      x = X[:,n]
+      theta = np.arccos( np.matmul(x.T,p) )
+      V[:,n] = ( theta/np.sin(theta) ) * ( x-p*np.cos(theta) )
+    return V
+###########################################################################
+###########################################################################
+def random_spherical_data(param):
+    S = random_spherical_subspace(param)
+    #####################################
+    Vt = random_spherical_tangents(S,param)
+    #####################################
+    X = spherical_exp(Vt,S)
+    #####################################
+    noise_lvl = compute_noise_lvl(X,S)
+    return X,S,noise_lvl
+###########################################################################
+def random_hyperbolic_data(param):
+    S = random_hyperbolic_subspace(param)
+    #####################################
+    Vt = random_hyperbolic_tangents(S,param)
+    #####################################
+    X = hyperbolic_exp(Vt,S)
+    #####################################
+    noise_lvl = compute_H_noise_lvl(X,S)
+    return X,S,noise_lvl
+###########################################################################
+def compute_H_noise_lvl(X,S):
+    H = S.H
+    D = np.shape(H)[0]-1
+    d = np.shape(H)[1]-1
+    N = np.shape(X)[1]
+    #####################################
+    J = np.eye(D+1)
+    J[0,0] = -1
+    J_ = np.eye(d+1)
+    J_[0,0] = -1
+    #####################################
+    X_ = np.matmul(np.matmul(H.T, J),X)
+    noise_lvl = 0
+    for n in range(N):
+        x = X_[:,n]
+        tmp = np.sqrt(-np.matmul(x.T,np.matmul(J_,x)))
+        tmp = np.maximum(tmp,1)
+        noise_lvl = noise_lvl + np.arccosh(tmp)/N
+    return noise_lvl
+###########################################################################
+def compute_noise_lvl(X,S):
+    H = S.H
+    noise_lvl = np.linalg.norm(np.matmul(H.T,X),2,axis = 0)
+    noise_lvl = np.minimum(noise_lvl,1)
+    noise_lvl = np.arccos(noise_lvl)
+    noise_lvl = np.mean(noise_lvl)
+    return noise_lvl
+###########################################################################
+###########################################################################
+def compute_J_evs(Cx,d):
+    # D = np.shape(Cx)[0]-1
+    # J = np.eye(D+1)
+    # J[0,0] = -1
+    # evals = []
+    # eval_signs = []
+    # condition = True
+    # count = 0
+    # evecs = []
+    # while condition:
+    #     v = np.random.randn(D+1,1) 
+    #     condition_i = True
+    #     count_i = 0
+    #     count = count + 1 
+    #     #print(count)
+    #     #print(J_norm(v,D))
+    #     while condition_i:
+    #         count_i = count_i + 1
+    #         v_ = np.matmul(np.matmul(Cx,J),v)
+    #         v_ = np.matmul(np.matmul(Cx,J),v_)
+    #         v_ = v_/np.sqrt(np.abs(J_norm(v_,D))) 
+    #         #print( np.linalg.norm(v-v_)/(D+1) )
+    #         condition_i = np.linalg.norm(v-v_)/(D+1) > count*(10**(-10))
+    #         v = v_
+    #         #if count_i > 100000:
+    #         #    count_i = 0
+    #         #    v = np.random.randn(D+1,1) 
+    #         #print(np.linalg.norm(v-v_)/(D+1) > count*(10**(-10)) )
+    #         #print(count)
+    #         #print(np.linalg.norm(v-v_))
+    #     #print(v)
+    #     sgn = np.sign(J_norm(v,D))
+    #     #print(sgn)
+    #     if count == 1:
+    #         evecs = v
+    #     else:
+    #         evecs = np.concatenate( (evecs,v) , axis = 1)
+    #     lmbd = np.matmul(np.matmul(v.T,J), np.matmul(np.matmul(Cx,J),v))
+    #     lmbd = np.squeeze(lmbd)
+    #     evals = np.append(evals,lmbd)
+    #     eval_signs = np.append(eval_signs,sgn)
+    #     Cx = Cx - lmbd*np.matmul(v,v.T)
+    #     #print(Cx)
+    #     condition = check_evals(eval_signs,d)
+    #     #print(Cx)
+    D = np.shape(Cx)[0]-1
+    J = np.eye(D+1)
+    J[0,0] = -1
+    evals = []
+    eval_signs = []
+    condition = True
+    count = 0
+    evecs = []
+    while condition:
+        v = np.random.randn(D+1,1) 
+        condition_i = True
+        count_i = 0
+        count = count + 1 
+        # while condition_i:
+        #     count_i = count_i + 1
+        #     v_ = np.matmul(np.matmul(Cx,J),v)
+        #     v_ = np.matmul(np.matmul(Cx,J),v_)
+        #     v_ = v_/np.sqrt(np.abs(J_norm(v_,D))) 
+        #     condition_i = np.linalg.norm(v-v_)/(D+1) > count*(10**(-10))
+        #     v = v_
+        # sgn = np.sign(J_norm(v,D))
+
+        _, v = eigs(np.matmul(Cx,J), k=1)
+        v = v/np.sqrt(np.abs(J_norm(v,D))) 
+        v = np.real(v)
+        sgn = np.sign(J_norm(v,D))
+        if count == 1:
+            evecs = v
+        else:
+            evecs = np.concatenate( (evecs,v) , axis = 1)
+        lmbd = np.matmul(np.matmul(v.T,J), np.matmul(np.matmul(Cx,J),v))
+
+        lmbd = np.squeeze(lmbd)
+        evals = np.append(evals,lmbd)
+        eval_signs = np.append(eval_signs,sgn)
+        Cx = Cx - lmbd*np.matmul(v,v.T)
+        #print(Cx)
+        condition = check_evals(eval_signs,d)
+        #print(Cx)
+    return evals, eval_signs, evecs
+########################################################################### 
+def check_evals(eval_signs,d):
+    evals_p = np.sum(eval_signs>0)
+    evals_n = np.sum(eval_signs<0)
+    condition = True
+    if (evals_p == d) and (evals_n >= 1):
+        condition = False
+    return condition
+########################################################################### 
+def subspace_dist(S,S_):
+    H = S.H
+    H_ = S_.H
+    #####################################
+    T = np.matmul(H.T,H_)
+    #####################################
+    SVs = scipy.linalg.svdvals(T)
+    #print(SVs)
+    #print(T)
+    #print(SVs)
+    SVs = np.minimum(SVs,1)
+    #print(SVs)
+    #####################################
+    dist =  np.sqrt( np.sum(np.arccos(SVs)**2) )
+    return dist
+###########################################################################
+def subspace_dist_H(S,S_,param):
+    H = S.H
+    H_ = S_.H
+    #####################################
+    J = np.eye(param.D+1)
+    J[0,0] = -1
+    #####################################
+    Jd = np.eye(param.d+1)
+    J[0,0] = -1
+    T = np.matmul(np.matmul(H.T,J), H_)
+    T = np.matmul(np.matmul(T.T,Jd),T)
+    #####################################
+    evals, eval_signs,evecs = compute_J_evs(T,np.shape(T)[0]-1)
+    print(evals)
+    print(eval_signs)
+    return 0
+###########################################################################
+######################################################################
+######################################################################
+######################################################################
+class FourLayerNN(nn.Module):
+    def __init__(self, input_dim, hidden1_dim, hidden2_dim, hidden3_dim, output_dim):
+        super(FourLayerNN, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden1_dim)
+        self.fc2 = nn.Linear(hidden1_dim, hidden2_dim)
+        self.fc3 = nn.Linear(hidden2_dim, hidden3_dim)
+        self.fc4 = nn.Linear(hidden3_dim, output_dim)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.relu(self.fc3(x))
+        x = self.fc4(x)
+        return x
+######################################################################
+######################################################################
+######################################################################
+def train_neural_network(X, y, test_size=0.1, stratify=None, seed=None, num_iterations=20):
+    accuracies = []
+
+    np.random.seed(seed)  # For reproducibility of random splits
+    
+    for iteration in range(num_iterations):
+        torch.manual_seed(seed+iteration)
+        
+        state= np.random.randint(0, 10000)
+        #print(state)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=state)
+    
+        X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+        y_train_tensor = torch.tensor(y_train, dtype=torch.long)
+        X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+
+        input_dim = X.shape[1]
+        hidden1_dim = 512
+        hidden2_dim = 128
+        hidden3_dim = 32
+        output_dim = len(np.unique(y))
+        model = FourLayerNN(input_dim, hidden1_dim, hidden2_dim, hidden3_dim, output_dim)
+
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+        num_epochs = 100
+        for epoch in range(num_epochs):
+            model.train()
+            optimizer.zero_grad()
+            outputs = model(X_train_tensor)
+            loss = criterion(outputs, y_train_tensor)
+            loss.backward()
+            optimizer.step()
+
+        # Evaluate the model
+        model.eval()
+        with torch.no_grad():
+            outputs = model(X_test_tensor)
+            _, predicted = torch.max(outputs, 1)
+            accuracy = accuracy_score(y_test, predicted.numpy())
+            accuracies.append(accuracy)
+
+    average_accuracy = np.mean(accuracies)
+    return average_accuracy
+######################################################################
+######################################################################
+######################################################################
+def train_svm_and_evaluate(X, y, seed):
+    np.random.seed(seed)  # For reproducibility of random splits
+    accuracies = []  # To store accuracy of each split
+    
+    for _ in range(20):  # Perform 20 random splits and evaluations
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=np.random.randint(0, 10000))
+        model = SVC()
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        accuracies.append(accuracy_score(y_test, y_pred))
+    
+    average_accuracy = np.mean(accuracies)
+    return average_accuracy
+######################################################################
+######################################################################
+######################################################################
+def train_random_forest_and_evaluate(X, y, seed,max_tree_depth=20):
+    np.random.seed(seed)  # For reproducibility of random splits
+    accuracies = []  # To store accuracy of each split
+
+    max_d = 0
+    for _ in range(20):  # Perform 20 random splits and evaluations
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=np.random.randint(0, 10000))
+        #print(max_tree_depth)
+        model = RandomForestClassifier(max_depth=max_tree_depth)
+        model.fit(X_train, y_train)
+        #tree_depths = [tree.get_depth() for tree in model.estimators_]
+        #max_d = max( [max_d , max(tree_depths) ]) 
+        #print(max_d)
+        y_pred = model.predict(X_test)    
+        accuracies.append(accuracy_score(y_test, y_pred))
+    average_accuracy = np.mean(accuracies)
+    
+    return average_accuracy
+######################################################################
+######################################################################
+######################################################################
+def run_spherical_mds(dataset_name):
+    class parameters:
+        def __init__(self, D = 1000, d = 1, N = 10, sigma = 0.01):
+            self.D = D
+            self.d = d
+            self.N = N
+            self.sigma = sigma
+    ######################################################################
+    def load_data(dataset_name):
+        if dataset_name == 'GUniFrac':
+            address = "datasets/GUniFrac/doc/csv/"
+            X = np.load(address+'X.npy')
+            X = X.T
+        elif dataset_name == 'doi_10_5061_dryad_pk75d__v20150519':
+            address = "datasets/doi_10_5061_dryad_pk75d__v20150519/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            N, D = np.shape(X)
+            for n in range(N):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+        elif dataset_name == 'document':
+            address = "datasets/document/"
+            X = np.load(address+'X.npy').astype(float)
+            address = "datasets/document/"
+            label = np.load(address+'label.npy')
+            idx = (label==0) + (label == 1)
+            X = X[idx,:]
+            label = label[idx]
+            np.random.seed(42)
+            N0 = 400
+            N = np.shape(X)[0]
+            idx = np.random.choice(N, N0, replace=False)
+            X = X[idx,:]
+            for n in range(N0):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+        return X
+    ######################################################################
+    directory = "datasets/" +dataset_name +"/results/" 
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    X = load_data(dataset_name)
+
+    # Initial parameters
+    D,N = np.shape(X)
+    D -= 1
+    
+    DM = compute_sdm(X)
+    AIDM = compute_aidm(X)
+    KLDM = compute_kldm(X)
+    TVDM = compute_tvdm(X)
+    JSDM = compute_jsdm(X)
+
+    # A list of functions to run
+    functions = [
+        estimate_spherical_subspace,
+        estimate_spherical_subspace_liu,
+        estimate_spherical_subspace_dai,
+        #estimate_spherical_subspace_pga,
+        estimate_spherical_subspace_pga_2,
+    ]
+
+    # Prepare a list to collect the data
+    data_list = []
+    for d in range(2,D):
+        print(f"Running with d = {d}")
+        param = parameters(D=D, d=d, N=N, sigma = 0)
+        cnt = 0
+        for func in functions:
+            cnt = cnt +1
+            directory_ = directory+str(d)+'/'+str(func.__name__)+'/'
+            if not os.path.exists(directory_):
+                continue
+            X_ = np.load(directory_+'X_.npy')
+            S_ = np.load(directory_+'S_.npy', allow_pickle=True)
+
+            AIDM_ = compute_aidm(X_)
+            KLDM_ = compute_kldm(X_)
+            DM_ = compute_sdm(X_)
+            TVDM_ = compute_tvdm(X_)
+            JSDM_ = compute_jsdm(X_)
+
+            sphere_dist = total_distance(X, X_)
+            dist_distortion = distance_distortion(DM_, DM)
+            ai_distortion = distance_distortion(AIDM_, AIDM)
+            kl_distortion = distance_distortion(KLDM_, KLDM)
+            tv_distortion = distance_distortion(TVDM_, TVDM)
+            js_distortion = distance_distortion(JSDM_, JSDM)
+
+            data_list.append({"d": d, "Method": func.__name__, 
+                "sphere_dist":sphere_dist,
+                "ai_distortion":ai_distortion, 
+                "kl_distortion":kl_distortion,
+                "js_distortion":js_distortion,
+                "tv_distortion":tv_distortion,
+                "dist_distortion": dist_distortion
+                })
+            print("[",sphere_dist, ai_distortion, kl_distortion, js_distortion, tv_distortion,dist_distortion, "]")
+            results_df = pd.DataFrame(data_list)
+        print('############################################')
+        #results_df.to_csv(results_filename, index=False)
+        if d >= min(np.shape(X))-1:
+            break
+
+######################################################################
+######################################################################
+######################################################################
+def run_spherical_classifier(dataset_name):
+    class parameters:
+        def __init__(self, D = 1000, d = 1, N = 10, sigma = 0.01):
+            self.D = D
+            self.d = d
+            self.N = N
+            self.sigma = sigma
+    ######################################################################
+    def load_data(dataset_name):
+        if dataset_name == 'GUniFrac':
+            address = "datasets/GUniFrac/doc/csv/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            y = np.load('datasets/GUniFrac/doc/csv/SmokingStatus_categories.npy')
+        elif dataset_name == 'doi_10_5061_dryad_pk75d__v20150519':
+            address = "datasets/doi_10_5061_dryad_pk75d__v20150519/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            N, D = np.shape(X)
+            for n in range(N):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+            y = np.load('datasets/doi_10_5061_dryad_pk75d__v20150519/age_categories.npy') 
+        elif dataset_name == 'document':
+            address = "datasets/document/"
+            X = np.load(address+'X.npy').astype(float)
+            address = "datasets/document/"
+            label = np.load(address+'label.npy')
+            idx = (label==0) + (label == 1)
+            X = X[idx,:]
+            label = label[idx]
+            np.random.seed(42)
+            N0 = 400
+            N = np.shape(X)[0]
+            idx = np.random.choice(N, N0, replace=False)
+            X = X[idx,:]
+            y = label[idx]
+            for n in range(N0):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+        return X,y
+    ######################################################################
+    directory = "datasets/" +dataset_name +"/results/" 
+    #directory = "../results/" + dataset_name + "/"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    results_filename = os.path.join(directory, "classification_results_rf.csv")
+    if os.path.exists(results_filename):
+        results_df = pd.read_csv(results_filename)
+        print("Results already exist. Loaded results:")
+    else:
+        print("Results file does not exist. Computing the results...")
+        X,y = load_data(dataset_name)
+        ind = (y != 3)
+        y = y[ind]
+        #y = y[ind]
+        #print(y)
+
+        D,N = np.shape(X)
+        D = D-1
+        
+        functions = [
+            sfpca.estimate_spherical_subspace,
+            sfpca.estimate_spherical_subspace_liu,
+            sfpca.estimate_spherical_subspace_dai,
+            #sfpca.estimate_spherical_subspace_pga,
+            sfpca.estimate_spherical_subspace_pga_2,
+        ]
+
+        # Prepare a list to collect the data
+        data_list = []
+        seed = 100000
+        #average_acc_rf = train_random_forest_and_evaluate(X.T**2, y, seed=seed)
+
+        for d in range(2,D):
+            print(f"Running with d = {d}")
+            param = parameters(D=D, d=d, N=N, sigma = 0)
+            for func in functions:
+                directory_ = directory+str(d)+'/'+str(func.__name__)+'/'
+                if not os.path.exists(directory_):
+                    continue
+                X_ = np.load(directory_+'X_.npy')
+                S_ = np.load(directory_+'S_.npy', allow_pickle=True)
+                H = S_.item().H
+                X_low = np.matmul(H.T,X_)
+
+                X_ = X_[:,ind]
+                X_low = X_low[:,ind]
+                
+                #average_acc_nn = train_neural_network(X_.T**2, y, seed=seed)
+                #average_acc_svm = train_svm_and_evaluate(X_.T**2, y, seed=seed)
+                average_acc_rf = train_random_forest_and_evaluate(X_.T**2, y, seed=seed)
+
+                #average_acc_nn_low = train_neural_network(X_low.T**2, y, seed=seed)
+                #average_acc_svm_low = train_svm_and_evaluate(X_low.T**2, y, seed=seed)
+                #average_acc_rf_low = train_random_forest_and_evaluate(X_low.T**2, y, seed=seed)
+                
+                data_list.append({"d": d, "Method": func.__name__, 
+                    #"average_acc_nn":average_acc_nn,
+                    #"average_acc_svm":average_acc_svm,
+                    "average_acc_rf":average_acc_rf
+                    #"average_acc_nn_low":average_acc_nn_low,
+                    #"average_acc_svm_low":average_acc_svm_low,
+                    #"average_acc_rf_low":average_acc_rf_low
+                    })
+                #print("[",average_acc_nn, average_acc_svm,average_acc_rf,average_acc_nn_low, average_acc_svm_low,average_acc_rf_low, "]")
+                print("[",average_acc_rf, "]")
+                results_df = pd.DataFrame(data_list)
+                data_list.append({"d": d, "Method": func.__name__, 
+                    "average_acc_rf":average_acc_rf
+                    })
+                #print("[",average_acc_rf, "]")
+                results_df = pd.DataFrame(data_list)
+            print('############################################')
+            results_df.to_csv(results_filename, index=False)
+            if d >= min(np.shape(X))-1:
+               break
+######################################################################
+def run_spherical_information(dataset_name):
+    class parameters:
+        def __init__(self, D = 1000, d = 1, N = 10, sigma = 0.01):
+            self.D = D
+            self.d = d
+            self.N = N
+            self.sigma = sigma
+    ######################################################################
+    def load_data(dataset_name):
+        if dataset_name == 'GUniFrac':
+            address = "datasets/GUniFrac/doc/csv/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            y = np.load('datasets/GUniFrac/doc/csv/SmokingStatus_categories.npy')
+        elif dataset_name == 'doi_10_5061_dryad_pk75d__v20150519':
+            address = "datasets/doi_10_5061_dryad_pk75d__v20150519/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            N, D = np.shape(X)
+            for n in range(N):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+            y = np.load('datasets/doi_10_5061_dryad_pk75d__v20150519/age_categories.npy') 
+        elif dataset_name == 'document':
+            address = "datasets/document/"
+            X = np.load(address+'X.npy').astype(float)
+            address = "datasets/document/"
+            label = np.load(address+'label.npy')
+            idx = (label==0) + (label == 1)
+            X = X[idx,:]
+            label = label[idx]
+            np.random.seed(42)
+            N0 = 400
+            N = np.shape(X)[0]
+            idx = np.random.choice(N, N0, replace=False)
+            X = X[idx,:]
+            y = label[idx]
+            for n in range(N0):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+        return X,y
+    ######################################################################
+    directory = "datasets/" +dataset_name +"/results/" 
+    #directory = "../results/" + dataset_name + "/"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    results_filename = os.path.join(directory, "information_results.csv")
+    if os.path.exists(results_filename):
+        results_df = pd.read_csv(results_filename)
+        print("Results already exist. Loaded results:")
+    else:
+        print("Results file does not exist. Computing the results...")
+        X,y = load_data(dataset_name)
+        ind = (y != 3)
+        y = y[ind]
+
+        D,N = np.shape(X)
+        D = D-1
+        
+        functions = [
+            sfpca.estimate_spherical_subspace,
+            sfpca.estimate_spherical_subspace_liu,
+            sfpca.estimate_spherical_subspace_dai,
+            #sfpca.estimate_spherical_subspace_pga,
+            sfpca.estimate_spherical_subspace_pga_2,
+        ]
+
+        # Prepare a list to collect the data
+        data_list = []
+        for d in range(2,D):
+            print(f"Running with d = {d}")
+            param = parameters(D=D, d=d, N=N, sigma = 0)
+            cnt = 0
+            for func in functions:
+                cnt = cnt +1
+                directory_ = directory+str(d)+'/'+str(func.__name__)+'/'
+                if not os.path.exists(directory_):
+                    continue
+                X_ = np.load(directory_+'X_.npy')
+                S_ = np.load(directory_+'S_.npy', allow_pickle=True)
+                H = S_.item().H
+                X_low = np.matmul(H.T,X_)
+
+                X_ = X_[:,ind]
+                X_low = X_low[:,ind]
+
+                average_mi = compute_mutual_information(X_.T, y)
+                average_mi_low = compute_mutual_information(X_low.T, y)
+
+                data_list.append({"d": d, "Method": func.__name__, 
+                    "average_mi":average_mi,
+                    "average_mi_low":average_mi_low
+                    })
+                print("[",average_mi, average_mi_low, "]")
+                results_df = pd.DataFrame(data_list)
+            print('############################################')
+            results_df.to_csv(results_filename, index=False)
+            if d >= min(np.shape(X))-1:
+                break
+
+
+def compute_sparsity(matrix, threshold=0):
+    if not isinstance(matrix, np.ndarray):
+        matrix = np.array(matrix)
+    zero_elements = np.sum(np.abs(matrix) <= threshold)
+    total_elements = matrix.size
+    sparsity_level = zero_elements / total_elements
+    
+    return sparsity_level
+######################################################################
+def run_spherical_sparsity(dataset_name):
+    class parameters:
+        def __init__(self, D = 1000, d = 1, N = 10, sigma = 0.01):
+            self.D = D
+            self.d = d
+            self.N = N
+            self.sigma = sigma
+    ######################################################################
+    def load_data(dataset_name):
+        if dataset_name == 'GUniFrac':
+            address = "datasets/GUniFrac/doc/csv/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            y = np.load('datasets/GUniFrac/doc/csv/SmokingStatus_categories.npy')
+        elif dataset_name == 'doi_10_5061_dryad_pk75d__v20150519':
+            address = "datasets/doi_10_5061_dryad_pk75d__v20150519/"
+            X = np.load(address+'X.npy')
+            X = X.T
+            N, D = np.shape(X)
+            for n in range(N):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+            y = np.load('datasets/doi_10_5061_dryad_pk75d__v20150519/age_categories.npy') 
+        elif dataset_name == 'document':
+            address = "datasets/document/"
+            X = np.load(address+'X.npy').astype(float)
+            address = "datasets/document/"
+            label = np.load(address+'label.npy')
+            idx = (label==0) + (label == 1)
+            X = X[idx,:]
+            label = label[idx]
+            np.random.seed(42)
+            N0 = 400
+            N = np.shape(X)[0]
+            idx = np.random.choice(N, N0, replace=False)
+            X = X[idx,:]
+            y = label[idx]
+            for n in range(N0):
+                X[n,:] = X[n,:]/ np.sum(X[n,:])
+                X[n,:] = np.sqrt(X[n,:])
+            X = X.T
+        return X,y
+    ######################################################################
+    directory = "datasets/" +dataset_name +"/results/" 
+    results_filename = os.path.join(directory, "sparsity_results2.csv")
+    if os.path.exists(results_filename):
+        # Load the DataFrame from the CSV file
+        results_df = pd.read_csv(results_filename)
+        # Print the loaded results
+        print("Results already exist. Loaded results:")
+    else:
+        print("Results file does not exist. Computing the results...")
+        X,y = load_data(dataset_name)
+        # Initial parameters
+        D,N = np.shape(X)
+        D = D-1
+        # A list of functions to run
+        functions = [
+            sfpca.estimate_spherical_subspace,
+            sfpca.estimate_spherical_subspace_liu,
+            sfpca.estimate_spherical_subspace_dai,
+            #sfpca.estimate_spherical_subspace_pga,
+            sfpca.estimate_spherical_subspace_pga_2,
+        ]
+
+        # Prepare a list to collect the data
+        data_list = []
+        threshold = 10**(-4)/D
+        S = compute_sparsity(X**2, threshold)
+        for d in range(2,D):
+            #print(f"Running with d = {d}")
+            param = parameters(D=D, d=d, N=N, sigma = 0)
+            cnt = 0
+            for func in functions:
+                cnt = cnt +1
+                directory_ = directory+str(d)+'/'+str(func.__name__)+'/'
+            
+                if not os.path.exists(directory_):
+                    continue
+                X_ = np.load(directory_+'X_.npy')
+                #print(X_)
+                
+                S_ = compute_sparsity(X_**2-X**2, threshold)
+                
+
+                data_list.append({"d": d, "Method": func.__name__, 
+                    "sparsity_dist":np.abs(S-S_),
+                    "sparsity":S_
+                    })
+                print("[",np.abs(S-S_), S_, "]")
+                results_df = pd.DataFrame(data_list)
+            print('############################################')
+            results_df.to_csv(results_filename, index=False)
+            if d >= min(np.shape(X))-1:
+                break
 
